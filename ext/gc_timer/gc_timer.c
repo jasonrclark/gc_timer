@@ -13,23 +13,9 @@ VALUE timers_array;
 #include "ruby/debug.h"
 VALUE tp_gc_start, tp_gc_end;
 
-void
-on_gc_start(VALUE tpval, void *data) {
-  int count = RARRAY_LEN(timers_array);
-  for (int i = 0; i < count; i++) {
-    VALUE timer = rb_ary_entry(timers_array, i);
-    gc_timer_start(timer);
-  }
-}
+void on_gc_start(VALUE tpval, void *data);
+void on_gc_end(VALUE tpval, void *data);
 
-void
-on_gc_end(VALUE tpval, void *data) {
-  int count = RARRAY_LEN(timers_array);
-  for (int i = 0; i < count; i++) {
-    VALUE timer = rb_ary_entry(timers_array, i);
-    gc_timer_end(timer);
-  }
-}
 #endif
 
 void
@@ -75,6 +61,8 @@ gc_timer_all_timers(VALUE _) {
 static VALUE
 gc_timer_alloc(VALUE klass) {
   gc_timer_t *ptimer = xmalloc(sizeof(gc_timer_t));
+
+  // TODO: Use TypedData_Wrap_Struct instead
   VALUE obj = Data_Wrap_Struct(klass, 0, xfree, ptimer);
 
   gc_timer_clear(obj);
@@ -101,26 +89,34 @@ gc_timer_total_time(VALUE self) {
   return INT2FIX(get_timer(self)->total_time);
 }
 
-// TODO: This timing is at totally the wrong precision. Figure out the right
-// calls when not on a plane and lacking network
+// TODO: This timing is totally the wrong precision. Figure out the right calls
+// when not on a plane without network. Probably like getrusage_time in gc.c.
 int
 get_time() {
   return time(NULL);
 }
 
 void
-gc_timer_start(VALUE self) {
-  get_timer(self)->started = get_time();
+on_gc_start(VALUE tpval, void *data) {
+  int count = RARRAY_LEN(timers_array);
+  int now = get_time();
+  for (int i = 0; i < count; i++) {
+    VALUE timer = rb_ary_entry(timers_array, i);
+    get_timer(timer)->started = now;
+  }
 }
 
 void
-gc_timer_end(VALUE self) {
+on_gc_end(VALUE tpval, void *data) {
+  int count = RARRAY_LEN(timers_array);
   int now = get_time();
-  gc_timer_t *timer = get_timer(self);
-  if (timer->started > 0) {
-    timer->total_time += (now - timer->started);
-  }
+  for (int i = 0; i < count; i++) {
+    gc_timer_t *timer = get_timer(rb_ary_entry(timers_array, i));
+    if (timer->started > 0) {
+      timer->total_time += (now - timer->started);
+    }
 
-  timer->started = 0;
-  timer->count += 1;
+    timer->started = 0;
+    timer->count += 1;
+  }
 }

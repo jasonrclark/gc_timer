@@ -12,7 +12,4 @@ VALUE gc_timer_count(VALUE self);
 VALUE gc_timer_clear(VALUE self);
 VALUE gc_timer_total_time(VALUE self);
 
-void gc_timer_start(VALUE self);
-void gc_timer_end(VALUE self);
-
 #endif /* GC_TIMER_H */
