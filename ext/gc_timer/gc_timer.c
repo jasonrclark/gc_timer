@@ -9,6 +9,29 @@ typedef struct {
 VALUE rb_cGCTimer;
 VALUE timers_array;
 
+#ifdef RUBY_INTERNAL_EVENT_GC_START
+#include "ruby/debug.h"
+VALUE tp_gc_start, tp_gc_end;
+
+void
+on_gc_start(VALUE tpval, void *data) {
+  int count = RARRAY_LEN(timers_array);
+  for (int i = 0; i < count; i++) {
+    VALUE timer = rb_ary_entry(timers_array, i);
+    gc_timer_start(timer);
+  }
+}
+
+void
+on_gc_end(VALUE tpval, void *data) {
+  int count = RARRAY_LEN(timers_array);
+  for (int i = 0; i < count; i++) {
+    VALUE timer = rb_ary_entry(timers_array, i);
+    gc_timer_end(timer);
+  }
+}
+#endif
+
 void
 Init_gc_timer(void)
 {
@@ -16,14 +39,25 @@ Init_gc_timer(void)
   rb_cGCTimer = rb_define_class_under(rb_mGC, "Timer", rb_cObject);
 
   // Collection of all timers we're managing
-  rb_define_singleton_method(rb_cGCTimer, "all_timers", gc_timer_all_timers, 0);
   timers_array = rb_ary_new();
   rb_gc_register_mark_object(timers_array);
+  rb_define_singleton_method(rb_cGCTimer, "all_timers", gc_timer_all_timers, 0);
 
   // Struct support for our GC::Timer class
   rb_define_alloc_func(rb_cGCTimer, gc_timer_alloc);
+  rb_define_method(rb_cGCTimer, "clear",      gc_timer_clear, 0);
   rb_define_method(rb_cGCTimer, "count",      gc_timer_count, 0);
   rb_define_method(rb_cGCTimer, "total_time", gc_timer_total_time, 0);
+
+#ifdef RUBY_INTERNAL_EVENT_GC_START
+  // Register tracepoints as simple way to hook in on 2.1
+  // In the real implementation if this gets taken, this would get backed into
+  // the GC_PROF_TIMER_START and STOP macros used directly from the gc.c code
+  tp_gc_start = rb_tracepoint_new(0, RUBY_INTERNAL_EVENT_GC_START,     on_gc_start, NULL);
+  tp_gc_end   = rb_tracepoint_new(0, RUBY_INTERNAL_EVENT_GC_END_SWEEP, on_gc_end, NULL);
+  rb_tracepoint_enable(tp_gc_start);
+  rb_tracepoint_enable(tp_gc_end);
+#endif
 }
 
 gc_timer_t *
@@ -65,4 +99,28 @@ gc_timer_count(VALUE self) {
 VALUE
 gc_timer_total_time(VALUE self) {
   return INT2FIX(get_timer(self)->total_time);
+}
+
+// TODO: This timing is at totally the wrong precision. Figure out the right
+// calls when not on a plane and lacking network
+int
+get_time() {
+  return time(NULL);
+}
+
+void
+gc_timer_start(VALUE self) {
+  get_timer(self)->started = get_time();
+}
+
+void
+gc_timer_end(VALUE self) {
+  int now = get_time();
+  gc_timer_t *timer = get_timer(self);
+  if (timer->started > 0) {
+    timer->total_time += (now - timer->started);
+  }
+
+  timer->started = 0;
+  timer->count += 1;
 }

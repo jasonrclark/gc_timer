@@ -16,4 +16,21 @@ class GCTimerTest < Minitest::Test
     assert_equal 0, timer.count
     assert_equal 0, timer.total_time
   end
+
+  def test_garbage_collection_bumps_values
+    timer = GC::Timer.new
+    GC.start
+    assert timer.count > 0
+  end
+
+  def test_clearing
+    timer = GC::Timer.new
+    GC.start
+    GC.disable
+    timer.clear
+    assert_equal 0, timer.count
+    assert_equal 0, timer.total_time
+  ensure
+    GC.enable
+  end
 end
