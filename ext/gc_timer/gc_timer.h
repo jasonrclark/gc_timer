@@ -3,4 +3,5 @@
 
 #include "ruby.h"
 
+VALUE gc_timer_all_timers(VALUE klass);
 #endif /* GC_TIMER_H */
