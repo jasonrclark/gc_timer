@@ -1,5 +1,7 @@
 #include "gc_timer.h"
 
+// TODO: This struct should probably have a better API for distiguishing major/
+// minor GC phases for a real implementation.
 typedef struct {
     int started;
     int total_time;
@@ -39,6 +41,9 @@ Init_gc_timer(void)
   // Register tracepoints as simple way to hook in on 2.1
   // In the real implementation if this gets taken, this would get backed into
   // the GC_PROF_TIMER_START and STOP macros used directly from the gc.c code
+  //
+  // TODO: These may not be precisely the right points, and/or there may be
+  // other tracepoints around lazy sweeping that that should be timed.
   tp_gc_start = rb_tracepoint_new(0, RUBY_INTERNAL_EVENT_GC_START,     on_gc_start, NULL);
   tp_gc_end   = rb_tracepoint_new(0, RUBY_INTERNAL_EVENT_GC_END_SWEEP, on_gc_end, NULL);
   rb_tracepoint_enable(tp_gc_start);
