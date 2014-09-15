@@ -4,4 +4,6 @@
 #include "ruby.h"
 
 VALUE gc_timer_all_timers(VALUE klass);
+
+static VALUE gc_timer_alloc(VALUE klass);
 #endif /* GC_TIMER_H */
