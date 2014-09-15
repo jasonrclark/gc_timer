@@ -41,10 +41,10 @@ with no impact on our instance.
 My intent in putting this up is to show the type of API I'm interested in
 adding, not to actually pubish this as a gem.
 
-This depends on tracepoints only available in Ruby 2.1 (they're removed on
-master.) If this feature is desired, it should just be implemented directly in
-`gc.c`. A likely location available on trunk at the moment is the
-`gc_prof_timer_start` function. (https://github.com/ruby/ruby/blob/279086dd618bf34892e250b509630d721d0bd0a4/gc.c#L7795-L7806)
+This depends on tracepoints but it seems more reasonable to do this directly in
+`gc.c` if the feature is desired.  A likely location available on trunk at the
+moment is the `gc_prof_timer_start` function.
+(https://github.com/ruby/ruby/blob/279086dd618bf34892e250b509630d721d0bd0a4/gc.c#L7795-L7806)
 
 ## Contributing
 
