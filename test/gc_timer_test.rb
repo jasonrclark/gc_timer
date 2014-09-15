@@ -10,4 +10,10 @@ class GCTimerTest < Minitest::Test
     timer = GC::Timer.new
     assert_equal [timer], GC::Timer.all_timers
   end
+
+  def test_defaults_on_new_timer
+    timer = GC::Timer.new
+    assert_equal 0, timer.count
+    assert_equal 0, timer.total_time
+  end
 end

@@ -2,7 +2,7 @@
 
 typedef struct {
     int started;
-    int total_time_s;
+    int total_time;
     int count;
 } gc_timer_t;
 
@@ -22,6 +22,15 @@ Init_gc_timer(void)
 
   // Struct support for our GC::Timer class
   rb_define_alloc_func(rb_cGCTimer, gc_timer_alloc);
+  rb_define_method(rb_cGCTimer, "count",      gc_timer_count, 0);
+  rb_define_method(rb_cGCTimer, "total_time", gc_timer_total_time, 0);
+}
+
+gc_timer_t *
+get_timer(VALUE self) {
+  gc_timer_t *timer;
+  Data_Get_Struct(self, void, timer);
+  return timer;
 }
 
 VALUE
@@ -34,7 +43,26 @@ gc_timer_alloc(VALUE klass) {
   gc_timer_t *ptimer = xmalloc(sizeof(gc_timer_t));
   VALUE obj = Data_Wrap_Struct(klass, 0, xfree, ptimer);
 
-  /*gc_timer_clear(obj);*/
+  gc_timer_clear(obj);
   rb_ary_push(timers_array, obj);
   return obj;
+}
+
+VALUE
+gc_timer_clear(VALUE self) {
+  gc_timer_t *timer = get_timer(self);
+  timer->count = 0;
+  timer->total_time = 0;
+  timer->started = 0;
+  return self;
+}
+
+VALUE
+gc_timer_count(VALUE self) {
+  return INT2FIX(get_timer(self)->count);
+}
+
+VALUE
+gc_timer_total_time(VALUE self) {
+  return INT2FIX(get_timer(self)->total_time);
 }
